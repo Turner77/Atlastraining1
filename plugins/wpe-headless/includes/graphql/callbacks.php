@@ -183,3 +183,72 @@ function wpe_headless_conditional_tags_resolver( $root, $args, AppContext $conte
 
 	return $conditional_tag_values;
 }
+
+
+register_graphql_mutation(
+	'loginMutation',
+	array(
+		'inputFields'         => array(
+			'username' => array(
+				'type'        => 'String',
+				'description' => __( 'Username for login', 'wpe-headless' ),
+			),
+			'email'    => array(
+				'type'        => 'String',
+				'description' => __( 'Email for login', 'wpe-headless' ),
+			),
+			'password' => array(
+				'type'        => 'String',
+				'description' => __( 'Password for login', 'wpe-headless' ),
+			),
+		),
+		'outputFields'        => array(
+			'authorization_code' => array(
+				'type'        => 'String',
+				'description' => __( 'Authorization code used for requesting a refresh token', 'wpe-headless' ),
+			),
+		),
+		'mutateAndGetPayload' => function( $input, $context, $info ) {
+			$username = isset( $input['username'] ) ? $input['username'] : null;
+			$email  = isset( $input['email'] ) ? $input['email'] : null;
+			$password = isset( $input['password'] ) ? $input['password'] : null;
+			$code = null;
+			$authenticate = null;
+			$user = null;
+
+			if ( ! $username && ! $email && ! $password ) {
+				return array(
+					'code' => $code,
+				);
+			}
+
+			if ( $email ) {
+				$authenticate = wp_authenticate_email_password(
+					null,
+					$email,
+					$password
+				);
+				$user = get_user_by( 'email', $email );
+			} else {
+				$authenticate = wp_authenticate_username_password(
+					null,
+					$username,
+					$password
+				);
+				$user = get_user_by( 'login', $username );
+			}
+
+			if ( is_wp_error( $authenticate ) ) {
+				return array(
+					'code' => $code,
+				);
+			}
+
+			$code = wpe_headless_generate_authentication_code( $user );
+
+			return array(
+				'authorization_code' => $code,
+			);
+		},
+	)
+);

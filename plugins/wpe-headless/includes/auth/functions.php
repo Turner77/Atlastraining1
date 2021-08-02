@@ -36,6 +36,19 @@ function wpe_headless_generate_authentication_code( $wp_user ) {
 }
 
 /**
+ * Generate a refresh token given a user.
+ *
+ * @uses wpe_headless_generate_user_code()
+ *
+ * @param WP_User $wp_user A WP_User object.
+ *
+ * @return string|bool An encrypted string or false.
+ */
+function wpe_headless_generate_refresh_token( $wp_user ) {
+	return wpe_headless_generate_user_code( $wp_user, 'rt' );
+}
+
+/**
  * Get a WP_User given an access token.
  *
  * @uses wpe_headless_get_user_from_code()
@@ -64,12 +77,26 @@ function wpe_headless_get_user_from_authentication_code( $code, $duration ) {
 }
 
 /**
+ * Get a WP_User given a refresh token.
+ *
+ * @uses wpe_headless_get_user_from_code()
+ *
+ * @param string $code     A base 64 encoded string.
+ * @param int    $duration The duration in seconds to remain valid.
+ *
+ * @return WP_User|bool A WP_User object or false.
+ */
+function wpe_headless_get_user_from_refresh_token( $token, $duration ) {
+	return wpe_headless_get_user_from_code( $token, 'rt', $duration );
+}
+
+/**
  * Generate an encrypted code for the given WP_User and type.
  *
  * @uses wpe_headless_encrypt()
  *
  * @param WP_User $wp_user A WP_User object.
- * @param string  $type    The type of code. Either 'ac' or 'at'.
+ * @param string  $type    The type of code. Either 'ac', 'rt', 'at'.
  *
  * @return string|bool An encrypted string or false if failure.
  */

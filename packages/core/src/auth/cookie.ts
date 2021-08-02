@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { IncomingMessage, ServerResponse } from 'http';
 import isNil from 'lodash/isNil';
 import isString from 'lodash/isString';
@@ -14,6 +15,12 @@ export function cookieKey(): string {
   const { wpUrl } = headlessConfig();
 
   return `${wpUrl}-at`;
+}
+
+export function refreshTokenCookieKey(): string {
+  const { wpUrl } = headlessConfig();
+
+  return `${wpUrl}-rt`;
 }
 
 export function initializeCookies({
@@ -48,6 +55,31 @@ export function getAccessToken(options?: CookieOptions): string | undefined {
 
   return base64Decode(token);
 }
+
+export function useAccessToken(): string | null {
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/auth/token`)
+      .then((res) => res.json())
+      .then((res) => setAccessToken(res.access_token))
+      .catch((err) => console.log(err));
+  }, []);
+
+  return accessToken;
+}
+
+export function getRefreshToken(options?: CookieOptions): string | undefined {
+  const cookies = initializeCookies(options);
+  const token: string = cookies.get(refreshTokenCookieKey());
+
+  if (!token) {
+    return;
+  }
+
+  return base64Decode(token);
+}
+
 /* eslint-enable consistent-return */
 
 /* eslint-disable consistent-return */
@@ -104,5 +136,34 @@ export function storeAccessToken(
   res.setHeader(
     'Set-Cookie',
     `${COOKIE_KEY}=${encodedToken}; Max-Age=2592000; path=/; SameSite=Strict; Secure;`,
+  );
+}
+
+export function storeRefreshToken(
+  token: string | undefined,
+  res: ServerResponse,
+  options: CookieOptions,
+): void {
+  const COOKIE_KEY = refreshTokenCookieKey();
+  const cookies = initializeCookies(options);
+
+  if (!token) {
+    cookies.remove(COOKIE_KEY);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    res.setHeader(
+      'Set-Cookie',
+      `${COOKIE_KEY}=; expires=${yesterday.toUTCString()}; path=/`,
+    );
+
+    return;
+  }
+
+  const encodedToken = base64Encode(token);
+
+  cookies.set(COOKIE_KEY, encodedToken);
+  res.setHeader(
+    'Set-Cookie',
+    `${COOKIE_KEY}=${encodedToken}; Max-Age=2592000; path=/; SameSite=Strict; Secure; HttpOnly;`,
   );
 }

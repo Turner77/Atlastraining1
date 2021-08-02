@@ -1,12 +1,29 @@
-import { getNextStaticProps } from '@faustjs/next';
+import { getNextStaticProps, HeadlessContext } from '@faustjs/next';
 import { client } from 'client';
 import { Footer, Header, Hero } from 'components';
 import { GetStaticPropsContext } from 'next';
 import Head from 'next/head';
+import { useContext, useEffect } from 'react';
+import { useAccessToken } from '@faustjs/core';
 
 export default function Page() {
   const { useQuery } = client;
   const generalSettings = useQuery().generalSettings;
+
+  const accessToken = useAccessToken();
+
+  console.log(accessToken);
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetch(`http://localhost:3000/api/auth/token`);
+      const json = await res.json();
+
+      const accessToken = json.access_token;
+
+      console.log(accessToken);
+    })();
+  }, []);
 
   return (
     <>
@@ -42,9 +59,9 @@ export default function Page() {
   );
 }
 
-export async function getStaticProps(context: GetStaticPropsContext) {
-  return getNextStaticProps(context, {
-    Page,
-    client,
-  });
-}
+// export async function getStaticProps(context: GetStaticPropsContext) {
+//   return getNextStaticProps(context, {
+//     Page,
+//     client,
+//   });
+// }

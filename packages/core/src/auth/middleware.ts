@@ -1,8 +1,9 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import trim from 'lodash/trim';
+import { headlessConfig } from '../config';
 import { getQueryParam, isValidUrl } from '../utils';
 import { authorize, ensureAuthorization } from './authorize';
-import { storeAccessToken } from './cookie';
+import { getRefreshToken, storeAccessToken, storeRefreshToken } from './cookie';
 
 export function redirect(res: ServerResponse, url: string): void {
   res.writeHead(302, {
@@ -72,4 +73,41 @@ export async function authorizeHandler(
     res.statusCode = 500;
     res.end();
   }
+}
+
+export async function accessTokenHandler(
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<any> {
+  const url = req.url as string;
+  const code = getQueryParam(url, 'code');
+  const { wpUrl } = headlessConfig();
+
+  const response = await fetch(`${wpUrl}/wp-json/wpac/v1/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      code: code || undefined,
+      refresh_token: getRefreshToken({ request: req }),
+    }),
+  });
+
+  if (!response.ok) {
+    res.statusCode = 400;
+    res.end({ error: 'unauthorized' });
+  }
+
+  const { access_token, refresh_token } = (await response.json()) as {
+    access_token: string;
+    refresh_token: string;
+  };
+
+  storeRefreshToken(refresh_token, res, {
+    request: req,
+  });
+
+  res.end(JSON.stringify({ access_token }));
 }

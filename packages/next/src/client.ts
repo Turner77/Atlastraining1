@@ -83,6 +83,7 @@ export interface NextClient<
 export interface HeadlessContextType {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client?: NextClient<RequiredSchema>;
+  accessToken?: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
